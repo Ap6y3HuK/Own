@@ -1,0 +1,47 @@
+body {
+	background: url(../images/urban.jpg);
+	background-repeat: no-repeat;
+	margin: 0;
+	height:auto;
+	background-position: center;
+	background-attachment: fixed;
+}
+
+#googleMap {
+	width: auto;
+	height: 500px;
+	background: gray;
+	margin-left: 22px;
+	margin-right: 22px;
+	border: 2px black solid;
+	
+}
+
+.hColor {
+	margin:12px;
+	color:white;
+	
+}
+#wikiInfo {
+	width: auto;
+	height: 200px; /* 419 max */
+	margin-left: 22px;
+	margin-right: 22px;
+	background-color: white;
+	opacity: 0.6;
+	line-height: 1.5;
+	font-size: 15px;
+	padding: 10px;
+	padding-bottom: 0px;
+	overflow: auto;
+}
+.own-button-prop {
+	margin-left: 10px;
+	}
+	
+.input-group {
+	margin-bottom:3px;
+	width: 300px;
+	float: left;
+	
+}

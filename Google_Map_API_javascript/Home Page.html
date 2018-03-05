@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Chernenko Dmytro</title>
+	<link rel="stylesheet" href="css/bootstrap.min.css">
+	<link rel="stylesheet" href="css/style.css">
+	<script src="js/jquery.min.js" ></script>
+	<script src="js/bootstrap.min.js"></script>
+	<script src="https://maps.googleapis.com/maps/api/js?&language=en&key=AIzaSyBMIwb0Qlk3wGValmXxYblGBzLoYi9_cok&libraries=places"
+	type="text/javascript"></script>
+	
+</head>
+<body>
+	<script>
+		
+		var keysCities = [];		
+		var latlngCities = [];		
+		var marker = new google.maps.Marker();
+		var geocoder = new google.maps.Geocoder();
+		var newGeocoder = new google.maps.Geocoder;
+		var direction = new google.maps.DirectionsService();
+		var render = new google.maps.DirectionsRenderer();
+		var generalMap;
+		var globalcCounter = -1;
+		
+		
+	</script>
+	<h1 class="hColor">Google Map</h1>
+	<div class="container">
+		<div class="input-group">
+			<a class="input-group-addon btn"  id="wyszukaj_btn">Wyszukaj:</a>
+			<input type="text" id="search_box" class="form-control" placeholder="wpisz miasto">
+		</div>
+		<div class="input-group" style="margin-left:100px;">
+			<a class="input-group-addon btn"  id="wyszukaj_trase">Jedz do:</a>
+			<input type="text" id="route_box" class="form-control" placeholder="wpisz miasto">
+		</div>
+	</div>
+	<div id="googleMap"></div>
+	<br>
+	<button class="btn own-button-prop" id="prev">Previous</button>
+	<button class="btn own-button-prop" id="next">Next</button>
+	<br>
+	<br>
+	<div id="wikiInfo"> </div>
+	
+	<script>
+		if (navigator.onLine) {
+			startPage();
+		}else {
+			alert('INTERNET_DISCONNECTED');
+		}
+		
+		$(document).ready(function(){
+			$('#next').click(function(){
+				showInfoPlus();
+			});
+			
+			$('#prev').click(function(){
+				showInfoMinus();
+			});
+		});
+		
+		function startPage () {
+		
+			var mapProp = {
+				center: new google.maps.LatLng(51.388243, 18.980570),
+				zoom:5,
+				backgroundColor:'silver',
+			};
+			generalMap = new google.maps.Map(document.getElementById("googleMap"),mapProp);
+			if (!generalMap){
+				alert('WRONG');
+			}
+			var searchBox = new google.maps.places.SearchBox(document.getElementById('search_box'));
+			searchBox = new google.maps.places.SearchBox(document.getElementById('route_box'));
+			
+			generalMap.addListener('click', function(event) {
+			  addMarker(event.latLng);
+			});
+			
+			function addMarker(location) {
+			var coord = location.lat()+','+location.lng();
+			findingWayPoint(coord);
+			}
+			
+			document.getElementById('wyszukaj_btn').addEventListener('click', function() {
+				  geoCoding(geocoder, generalMap);
+			});
+			document.getElementById('wyszukaj_trase').addEventListener('click', function() {
+				  createDirection(direction, generalMap, render);
+			});
+		};
+		
+		function geoCoding(geocoder, resultMaps){
+			globalcCounter = -1;
+			var coord;
+			keysCities.length = 0;
+			latlngCities.length = 0;
+			var adress = document.getElementById('search_box').value;
+			geocoder.geocode({'address': adress}, function ( results, status ){
+				if (status === "OK") {
+					resultMaps.setCenter(results[0].geometry.location);
+					console.log(results[0].geometry.location.lat()+','+results[0].geometry.location.lng());
+					coord = results[0].geometry.location.lat()+','+results[0].geometry.location.lng();
+					//console.log(results[0].geometry.location);
+					var mmm = findingWayPoint(coord);
+					
+				}else {
+					alert('Somothing is wrong, status: '+status);
+				}
+				
+			});
+			
+		};
+		
+		function findingWayPoint(coordinates){
+			globalcCounter = -1;
+			keysCities.length = 0;
+			latlngCities.length = 0;
+			
+			var kkk = 'https://maps.googleapis.com/maps/api/geocode/json?latlng='+coordinates+'&language=en&key=AIzaSyBMIwb0Qlk3wGValmXxYblGBzLoYi9_cok';
+			$.getJSON(kkk, function (result){
+				if (result.status == 'OK') {
+					for (var j = 0; j < result.results[0].address_components.length; j++){
+						if ((result.results[0].address_components[j].types[0] == "locality") && (result.results[0].address_components[j].types[1] == "political")) {
+							var pin = result.results[0].address_components[j].long_name;
+							if (keysCities.indexOf(pin) < 0){
+								keysCities.push(pin);
+								latlngCities.push(result.results[0].geometry.location);
+								if (globalcCounter == -1){
+									showInfoPlus();
+								}
+							}
+						}
+					}
+				} else {
+					console.log(result.status);
+				}	
+			});
+			//console.log(keysCities);
+			return keysCities;
+		}
+		
+		function createDirection(direct, resultMaps, render) {
+			var origin = document.getElementById('search_box').value;
+			if ((origin != null) && (origin !='')) {
+				var destination = document.getElementById('route_box').value;
+				var request = {
+					origin: origin, 
+					destination: destination, 
+					travelMode: 'DRIVING',
+					provideRouteAlternatives: true
+					};
+				direct.route(request, function(DirectionsResult, DirectionsStatus){
+					if (DirectionsStatus =='OK'){
+						render.setMap(resultMaps);
+						render.setDirections(DirectionsResult,newGeocoder);
+						
+						var mmm = findingWayPoints(DirectionsResult, function(){
+							alert('KONIEC');	
+						});
+						
+					} else {
+						alert('something is wrong, status: '+DirectionsStatus);
+					}
+				});
+			}
+		}
+		
+		/*function getNamesUsingCoordinates (coordinates, callback){
+			var kkk = 'https://maps.googleapis.com/maps/api/geocode/json?latlng='+coordinates+'&language=en&key=AIzaSyBMIwb0Qlk3wGValmXxYblGBzLoYi9_cok';
+			$.getJSON(kkk, function (result){
+				if (result.status == 'OK') {
+					for (var j = 0; j < result.results[0].address_components.length; j++){
+						if ((result.results[0].address_components[j].types[0] == "locality") && (result.results[0].address_components[j].types[1] == "political")) {
+							var pin = result.results[0].address_components[j].long_name;
+							if (keysCities.indexOf(pin) < 0){
+								console.log(coordinates);
+								keysCities.push(pin);
+								if (callback){
+									callback();
+									return true;
+								}
+							}
+						}
+					}
+				} else {
+					console.log(result.status);
+				}	
+			});
+			return false;
+		}*/
+		
+		function findingWayPoints(directResult, callback){
+			globalcCounter = -1;
+			var points = null;
+			keysCities.length = 0;
+			latlngCities.length = 0;
+			var markerDots = new google.maps.Marker();
+			markerDots.setMap(null);
+			points = cleaningWayPoints(directResult);
+			
+			for (var i = 0; i < points.length; i++){
+				var latlng = points[i];
+				var kkk = 'https://maps.googleapis.com/maps/api/geocode/json?latlng='+latlng+'&language=en&key=AIzaSyBMIwb0Qlk3wGValmXxYblGBzLoYi9_cok';
+				
+			$.getJSON(kkk, function (result){
+				if (result.status == 'OK') {
+					for (var j = 0; j < result.results[0].address_components.length; j++){
+						if ((result.results[0].address_components[j].types[0] == "locality") && (result.results[0].address_components[j].types[1] == "political")) {
+							var pin = result.results[0].address_components[j].long_name;
+							if (keysCities.indexOf(pin) < 0){
+								keysCities.push(pin);
+								latlngCities.push(result.results[0].geometry.location);
+								markerDots = new google.maps.Marker({
+									position: result.results[0].geometry.location,
+									icon: {
+										path: google.maps.SymbolPath.CIRCLE,
+										scale: 2
+									},
+									map: generalMap
+								});
+								if (globalcCounter == -1){
+									
+									showInfoPlus();
+								}
+							}
+						}
+					}
+				} else {
+					console.log(result.status);
+				}	
+			});
+				
+			}
+			console.log(keysCities);
+			console.log(latlngCities);
+			//console.log(places);
+			return keysCities;
+			callback();
+		}
+		
+		function cleaningWayPoints(DirectionsResult){
+			var points = [];
+			//var stalaLat = 0;
+			//var stalaLng = 0;
+			for (var i = 0; i < DirectionsResult.routes[0].overview_path.length; i++){
+				//console.log(stalaLat - DirectionsResult.routes[0].overview_path[i].lat());
+				//if ((stalaLat - DirectionsResult.routes[0].overview_path[i].lat() <= -0.01) || (stalaLat - DirectionsResult.routes[0].overview_path[i].lat() >= 0.01) || (stalaLng - DirectionsResult.routes[0].overview_path[i].lng() <= -0.01) || (stalaLng - DirectionsResult.routes[0].overview_path[i].lng() >= 0.01)) {
+					points.push(DirectionsResult.routes[0].overview_path[i].lat()+','+DirectionsResult.routes[0].overview_path[i].lng());
+					//stalaLat = DirectionsResult.routes[0].overview_path[i].lat();
+					//stalaLng = DirectionsResult.routes[0].overview_path[i].lng();
+					//console.log(DirectionsResult.routes[0].overview_path[i].lat()+','+DirectionsResult.routes[0].overview_path[i].lng());
+				//}
+			}
+			//console.log(points);
+			return points;
+		}
+		
+		function showInfoPlus() {
+			if (globalcCounter < keysCities.length - 1){
+				globalcCounter++;
+				marker.setMap(null);
+				$('#wikiInfo').empty();
+				//console.log(keysCities)
+				if (keysCities[globalcCounter] == "Warszawa"){
+					var link = "https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&format=json&titles=Warsaw&callback=?";
+				} else {
+					var link = "https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&format=json&titles="+keysCities[globalcCounter]+"&callback=?";
+				}
+				//console.log(link);
+				$.ajax( {
+					url: link,
+					dataType: 'json',
+					//async: false,
+					type: 'GET',
+					//headers: { 'Api-User-Agent': 'chernenko15@bk.ru' },
+					success: function (result){
+						var info = Object.values(result.query.pages)[0].extract;
+						if (info.length > 120 && info.includes('<ul>') == false) {
+								$('#wikiInfo').append(Object.values(result.query.pages)[0].extract);
+								$('#wikiInfo').append("<a href='https://en.wikipedia.org/wiki/"+keysCities[globalcCounter]+"'><b>Wiki Site</b></a>");
+								if (keysCities.length > 1) {
+									if (globalcCounter != latlngCities.length-1 && latlngCities[globalcCounter] != latlngCities[0]){
+										marker = new google.maps.Marker({
+											map: generalMap,
+											position: latlngCities[globalcCounter]
+										});
+									}	
+								} else {
+									marker = new google.maps.Marker({
+											map: generalMap,
+											position: latlngCities[globalcCounter]
+										});
+								}
+						} else {
+							showInfoPlus();
+						}
+					},
+					error: function (errorMessage){
+						console.log(errorMessage);
+						}
+				});
+				
+			}
+		}
+		
+		function showInfoMinus() {
+			
+			if (globalcCounter > 0){
+				globalcCounter--;
+				marker.setMap(null);
+				$('#wikiInfo').empty();
+				//console.log(keysCities)
+				var link = "https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&format=json&titles="+keysCities[globalcCounter]+"&callback=?";
+				//console.log(link);
+				$.ajax( {
+					url: link,
+					dataType: 'json',
+					//async: false,
+					type: 'GET',
+					//headers: { 'Api-User-Agent': 'chernenko15@bk.ru' },
+					success: function (result){
+						var info = Object.values(result.query.pages)[0].extract;
+						if (info.length > 120 && info.includes('<ul>') == false) {
+								$('#wikiInfo').append(Object.values(result.query.pages)[0].extract);
+								$('#wikiInfo').append("<a href='https://en.wikipedia.org/wiki/"+keysCities[globalcCounter]+"'><b>Wiki Site</b></a>");
+								if (globalcCounter != latlngCities.length && latlngCities[globalcCounter] != latlngCities[0]){
+									marker = new google.maps.Marker({
+										map: generalMap,
+										position: latlngCities[globalcCounter]
+									});
+								}
+						} else {
+							showInfoMinus();
+						}
+					},
+					error: function (errorMessage){
+						console.log(errorMessage);
+						}
+				});
+				
+			}
+		}
+		
+	</script>
+	
+
+</body>
+</html>
